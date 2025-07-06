@@ -2,11 +2,12 @@
 using Concentus.Oggfile;
 using EmbedIO;
 using Newtonsoft.Json;
+using System.Diagnostics;
 using System.Speech.AudioFormat;
 using System.Speech.Synthesis;
 using System.Text;
 
-namespace STT
+namespace SpeechAPITTS
 {
     internal class OpenAIVoicesResponse
     {
@@ -78,32 +79,41 @@ namespace STT
 
             var responseBuffer = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(response));
 
-            await context.Response.OutputStream.WriteAsync(responseBuffer, 0, responseBuffer.Length);
+            await context.Response.OutputStream.WriteAsync(responseBuffer);
             context.Response.Close();
         }
 
         private static async Task VoicesHandler(IHttpContext context)
         {
+            Debug.Assert(OperatingSystem.IsWindows());
+
             var synthesizer = new SpeechSynthesizer();
             var voices = synthesizer.GetInstalledVoices();
 
             await SendJsonResponse(context, 200, new OpenAIVoicesResponse
             {
-                Voices = voices.Select(voice => new OpenAIVoicesResponse.Voice
+                Voices = voices.Select(voice =>
                 {
-                    Id = voice.VoiceInfo.Name,
-                    Name = $"{voice.VoiceInfo.Name}/{voice.VoiceInfo.Gender}/{voice.VoiceInfo.Age}/{voice.VoiceInfo.Culture.Name}"
+                    Debug.Assert(OperatingSystem.IsWindows());
+
+                    return new OpenAIVoicesResponse.Voice
+                    {
+                        Id = voice.VoiceInfo.Name,
+                        Name = $"{voice.VoiceInfo.Name}/{voice.VoiceInfo.Gender}/{voice.VoiceInfo.Age}"
+                    };
                 }).ToList()
             });
         }
 
-        private static readonly Dictionary<string, IFormatConverter> formatConverters = new Dictionary<string, IFormatConverter>
+        private static readonly Dictionary<string, IFormatConverter> formatConverters = new()
         {
             { "opus", new OpusFormatConverter() }
         };
 
         private static async Task SpeechHandler(IHttpContext context)
         {
+            Debug.Assert(OperatingSystem.IsWindows());
+
             if (context.Request.ContentType != "application/json")
             {
                 await SendJsonResponse(context, 400, new OpenAIErrorResponse
@@ -120,7 +130,7 @@ namespace STT
             {
                 request = JsonConvert.DeserializeObject<OpenAISpeechRequest>(new StreamReader(context.Request.InputStream, Encoding.UTF8).ReadToEnd(), new JsonSerializerSettings
                 {
-                    Error = (object? sender, Newtonsoft.Json.Serialization.ErrorEventArgs args) =>
+                    Error = (sender, args) =>
                     {
                         throw args.ErrorContext.Error;
                     },
@@ -136,7 +146,7 @@ namespace STT
                 return;
             }
 
-            if (!formatConverters.ContainsKey(request.ResponseFormat))
+            if (!formatConverters.TryGetValue(request.ResponseFormat, out IFormatConverter? converter))
             {
                 await SendJsonResponse(context, 400, new OpenAIErrorResponse
                 {
@@ -148,7 +158,11 @@ namespace STT
 
             var synthesizer = new SpeechSynthesizer();
             var voices = synthesizer.GetInstalledVoices();
-            var voice = voices.FirstOrDefault(otherVoice => otherVoice.VoiceInfo.Name == request.Voice);
+            var voice = voices.FirstOrDefault(otherVoice =>
+            {
+                Debug.Assert(OperatingSystem.IsWindows());
+                return otherVoice.VoiceInfo.Name == request.Voice;
+            });
 
             if (voice == null)
             {
@@ -180,8 +194,6 @@ namespace STT
                 return;
             }
 
-            var converter = formatConverters[request.ResponseFormat];
-
             byte[] converted;
 
             try
@@ -204,7 +216,7 @@ namespace STT
 
             context.Response.ContentType = converter.ResultMimeType;
             context.Response.StatusCode = 200;
-            await context.Response.OutputStream.WriteAsync(converted, 0, converted.Length);
+            await context.Response.OutputStream.WriteAsync(converted);
             context.Response.Close();
         }
 
