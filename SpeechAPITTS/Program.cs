@@ -183,6 +183,7 @@ namespace SpeechAPITTS
 
             try
             {
+                Console.WriteLine(voice.VoiceInfo.Name ?? "WUT?");
                 synthesizer.SelectVoice(voice.VoiceInfo.Name);
                 synthesizer.SetOutputToAudioStream(outputStream,
                     new SpeechAudioFormatInfo(SampleRate, AudioBitsPerSample.Sixteen, Channels == 1 ? AudioChannel.Mono :
