@@ -12,5 +12,6 @@ RUN mkdir /tmp/voices
 RUN wget https://microsoft-sapi-openai-voices.re146.dev/s2g-tatyana-x86.exe -O /tmp/voices/s2g-tatyana-x86.exe && wine /tmp/voices/s2g-tatyana-x86.exe /S /NCRC
 RUN wget https://microsoft-sapi-openai-voices.re146.dev/s2g-maxim-x86.exe -O /tmp/voices/s2g-maxim-x86.exe && wine /tmp/voices/s2g-maxim-x86.exe /S /NCRC
 RUN rm -rf /tmp/voices/
+ENV RUN_AS_ROOT=yes
 EXPOSE 8000
 CMD ["wine", "SpeechAPITTS/SpeechAPITTS.exe"]
