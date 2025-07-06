@@ -94,7 +94,12 @@ namespace SpeechAPITTS
 
             await SendJsonResponse(context, 200, new OpenAIVoicesResponse
             {
-                Voices = voices.Select(voice =>
+                Voices = voices.Where(voice =>
+                {
+                    Debug.Assert(OperatingSystem.IsWindows());
+
+                    return voice.Enabled;
+                }).Select(voice =>
                 {
                     Debug.Assert(OperatingSystem.IsWindows());
 
@@ -166,7 +171,7 @@ namespace SpeechAPITTS
             var voice = voices.FirstOrDefault(otherVoice =>
             {
                 Debug.Assert(OperatingSystem.IsWindows());
-                return otherVoice.VoiceInfo.Name == request.Voice;
+                return otherVoice.Enabled && otherVoice.VoiceInfo.Name == request.Voice;
             });
 
             if (voice == null)
@@ -183,7 +188,6 @@ namespace SpeechAPITTS
 
             try
             {
-                Console.WriteLine(voice.VoiceInfo.Name ?? "WUT?");
                 synthesizer.SelectVoice(voice.VoiceInfo.Name);
                 synthesizer.SetOutputToAudioStream(outputStream,
                     new SpeechAudioFormatInfo(SampleRate, AudioBitsPerSample.Sixteen, Channels == 1 ? AudioChannel.Mono :

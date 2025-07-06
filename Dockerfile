@@ -6,5 +6,9 @@ RUN dotnet publish -c Release --self-contained true --runtime win-x86 -o out
 FROM scottyhardy/docker-wine:latest
 WORKDIR /app
 COPY --from=build /app/out/ SpeechAPITTS/
+RUN wine reg delete "HKLM\\Software\\Microsoft\\Speech\\Voices\\Tokens\\Wine Default Voice" /f
+RUN wget https://microsoft-sapi-openai-voices.re146.dev/maxim-lite-x86.exe -O voices/maxim-lite-x86.exe && wine voices/maxim-lite-x86.exe /VERYSILENT
+RUN wget https://microsoft-sapi-openai-voices.re146.dev/tatyana-lite-x86.exe -O voices/tatyana-lite-x86.exe && wine voices/tatyana-lite-x86.exe /VERYSILENT
+RUN rm -rf voices/
 EXPOSE 8000
 CMD ["wine", "SpeechAPITTS/SpeechAPITTS.exe"]
