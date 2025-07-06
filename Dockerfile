@@ -6,4 +6,5 @@ RUN dotnet publish -c Release --self-contained true --runtime win-x86 -o out
 FROM scottyhardy/docker-wine:latest
 WORKDIR /app
 COPY out/ SpeechAPITTS/ --from=build
+EXPOSE 8000
 CMD ["wine", "SpeechAPITTS.exe"]
