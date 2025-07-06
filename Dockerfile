@@ -6,7 +6,7 @@ RUN dotnet publish -c Release --self-contained true --runtime win-x86 -o out
 FROM scottyhardy/docker-wine:latest
 WORKDIR /app
 COPY --from=build /app/out/ SpeechAPITTS/
-RUN groupadd --gid 1010 wineuser && useradd --shell /bin/bash --uid 1010 --gid 1010 wineuser && mkdir /home/wineuser
+RUN groupadd --gid 1010 wineuser && useradd --shell /bin/bash --uid 1010 --gid 1010 wineuser && mkdir -p /home/wineuser && chown -R wineuser:wineuser /home/wineuser
 USER wineuser
 RUN wine reg delete "HKLM\\Software\\Microsoft\\Speech\\Voices\\Tokens\\Wine Default Voice" /f
 RUN mkdir /tmp/voices
