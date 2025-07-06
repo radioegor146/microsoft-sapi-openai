@@ -3,6 +3,8 @@ using Concentus.Oggfile;
 using EmbedIO;
 using Newtonsoft.Json;
 using System.Diagnostics;
+using System.Globalization;
+using System.Reflection;
 using System.Speech.AudioFormat;
 using System.Speech.Synthesis;
 using System.Text;
@@ -157,7 +159,10 @@ namespace SpeechAPITTS
             }
 
             var synthesizer = new SpeechSynthesizer();
+            FixVoices(synthesizer);
+
             var voices = synthesizer.GetInstalledVoices();
+
             var voice = voices.FirstOrDefault(otherVoice =>
             {
                 Debug.Assert(OperatingSystem.IsWindows());
@@ -218,6 +223,23 @@ namespace SpeechAPITTS
             context.Response.StatusCode = 200;
             await context.Response.OutputStream.WriteAsync(converted);
             context.Response.Close();
+        }
+
+        private static void FixVoices(SpeechSynthesizer synthesizer)
+        {
+            Debug.Assert(OperatingSystem.IsWindows());
+
+            var voices = synthesizer.GetInstalledVoices();
+            foreach (var voice in voices)
+            {
+                var voiceInfo = voice.VoiceInfo;
+                var voiceCultureField = typeof(VoiceInfo).GetField("_culture", BindingFlags.NonPublic | BindingFlags.Instance);
+                if (voiceCultureField == null)
+                {
+                    throw new Exception("field _culture not found");
+                }
+                voiceCultureField.SetValue(voiceInfo, CultureInfo.InvariantCulture);
+            }
         }
 
         private static WebServer CreateServer()
