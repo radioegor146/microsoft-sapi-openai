@@ -2,6 +2,7 @@
 using Concentus.Oggfile;
 using EmbedIO;
 using Newtonsoft.Json;
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
@@ -47,6 +48,9 @@ namespace SpeechAPITTS
 
         [JsonProperty("response_format", Required = Required.Always)]
         public string ResponseFormat { get; set; } = string.Empty;
+
+        [JsonProperty("speed", Required = Required.Always)]
+        public float Speed { get; set; } = 1.0f;
     }
 
     internal class VoiceWithCulture
@@ -190,11 +194,11 @@ namespace SpeechAPITTS
             byte[]? sampleData;
             if (extendedVoiceRequest != null)
             {
-                sampleData = await SpeakUsingExtendedVoice(context, request.Input, extendedVoiceRequest);
+                sampleData = await SpeakUsingExtendedVoice(context, request.Input, extendedVoiceRequest, request.Speed);
             } 
             else
             {
-                sampleData = await SpeakUsingVoice(context, request.Input, request.Voice);
+                sampleData = await SpeakUsingVoice(context, request.Input, request.Voice, request.Speed);
             }
 
             if (sampleData == null)
@@ -228,7 +232,7 @@ namespace SpeechAPITTS
             context.Response.Close();
         }
 
-        private static async Task<byte[]?> SpeakUsingVoice(IHttpContext context, string input, string voiceName)
+        private static async Task<byte[]?> SpeakUsingVoice(IHttpContext context, string input, string voiceName, float speed)
         {
             Debug.Assert(OperatingSystem.IsWindows());
 
@@ -258,6 +262,7 @@ namespace SpeechAPITTS
             try
             {
                 synthesizer.SelectVoice(voice.VoiceInfo.Name);
+                synthesizer.Rate = (int)Math.Round(speed);
                 synthesizer.SetOutputToAudioStream(outputStream,
                     new SpeechAudioFormatInfo(SampleRate, AudioBitsPerSample.Sixteen, Channels == 1 ? AudioChannel.Mono :
                     Channels == 2 ? AudioChannel.Stereo : throw new Exception("wrong number of channels")));
@@ -277,7 +282,7 @@ namespace SpeechAPITTS
         }
 
         private static async Task<byte[]?> SpeakUsingExtendedVoice(IHttpContext context, string input, 
-            ExtendedVoiceRequest extendedVoiceRequest)
+            ExtendedVoiceRequest extendedVoiceRequest, float speed)
         {
             Debug.Assert(OperatingSystem.IsWindows());
 
@@ -351,6 +356,7 @@ namespace SpeechAPITTS
                 foreach (var part in parts)
                 {
                     synthesizer.SelectVoice(usedVoices[part.Culture].Voice);
+                    synthesizer.Rate = (int)Math.Round(speed);
                     synthesizer.Speak(part.Part);
                 }
             }
